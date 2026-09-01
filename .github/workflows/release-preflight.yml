@@ -14,7 +14,7 @@ permissions:
 jobs:
   preflight:
     if: github.ref == 'refs/heads/main'
-    uses: smnandre/.github/.github/workflows/macOS-preflight.yml@main
+    uses: smnandre/.github/.github/workflows/macOS-preflight.yml@73b564c9b3e173df776fc88a630d7ec524d30b77
     with:
       version: ${{ inputs.version }}
       runner: macos-26

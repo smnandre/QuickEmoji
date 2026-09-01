@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   release:
-    uses: smnandre/.github/.github/workflows/macOS-release.yml@main
+    uses: smnandre/.github/.github/workflows/macOS-release.yml@73b564c9b3e173df776fc88a630d7ec524d30b77
     with:
       runner: macos-26
       app_name: QuickEmoji
