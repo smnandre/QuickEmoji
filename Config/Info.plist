@@ -28,5 +28,7 @@
     <true/>
     <key>NSAccessibilityUsageDescription</key>
     <string>QuickEmoji needs Accessibility access to detect the text cursor position and insert characters into other applications.</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright © 2026 Simon André</string>
 </dict>
 </plist>

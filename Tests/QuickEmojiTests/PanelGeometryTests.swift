@@ -37,14 +37,10 @@ final class PanelGeometryTests: XCTestCase {
         XCTAssertTrue(PanelGeometry.isUsableSavedFrame(frame, visibleFrames: visibleFrames))
     }
 
-    func testPickerGeometryCapsVisibleGridAtFiveByTwo() {
+    func testPickerGeometryUsesFiveColumnsAndTwoRows() {
         XCTAssertEqual(PickerGeometry.visibleColumnLimit, 5)
+        XCTAssertEqual(PickerGeometry.visibleRowLimit, 2)
         XCTAssertEqual(PickerGeometry.defaultSize.width, 298)
         XCTAssertEqual(PickerGeometry.defaultSize.height, 190)
-        XCTAssertEqual(PickerGeometry.visibleRowCount(for: 0), 1)
-        XCTAssertEqual(PickerGeometry.visibleRowCount(for: 5), 1)
-        XCTAssertEqual(PickerGeometry.visibleRowCount(for: 6), 2)
-        XCTAssertEqual(PickerGeometry.visibleRowCount(for: 18), 2)
-        XCTAssertEqual(PickerGeometry.visibleRowCount(for: 40), 2)
     }
 }

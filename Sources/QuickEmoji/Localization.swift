@@ -26,12 +26,7 @@ enum L10n {
         let components = localeIdentifier.split(whereSeparator: { $0 == "-" || $0 == "_" })
         guard let language = components.first.map({ String($0).lowercased() }) else { return [] }
 
-        var candidates = [localeIdentifier.replacingOccurrences(of: "_", with: "-")]
-        if language == "zh", !components.contains(where: { $0.lowercased() == "hant" }) {
-            candidates.append("zh-Hans")
-        }
-        candidates.append(language)
-        return candidates
+        return [localeIdentifier.replacingOccurrences(of: "_", with: "-"), language]
     }
 }
 

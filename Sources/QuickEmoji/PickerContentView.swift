@@ -1,81 +1,39 @@
 import AppKit
 import SwiftUI
 
-struct PickerCategory: Identifiable, Equatable {
-    enum Filter: Equatable {
-        case all
-        case recent
-        case categories(Set<String>)
-    }
-
-    let id: String
-    let label: String
-    let systemImage: String
-    let filter: Filter
-
-    static let all = PickerCategory(
-        id: "all",
-        label: "All",
-        systemImage: "square.grid.2x2",
-        filter: .all
-    )
-
-    static let defaults: [PickerCategory] = [
-        all,
-        PickerCategory(id: "recent", label: "Recent", systemImage: "clock", filter: .recent),
-        PickerCategory(id: "faces", label: "Faces", systemImage: "face.smiling", filter: .categories(["faces"])),
-        PickerCategory(id: "people", label: "People", systemImage: "person.2", filter: .categories(["people"])),
-        PickerCategory(
-            id: "symbols", label: "Symbols", systemImage: "checkmark.circle", filter: .categories(["symbols"])),
-        PickerCategory(
-            id: "arrows", label: "Arrows", systemImage: "arrow.left.arrow.right", filter: .categories(["arrows"])),
-        PickerCategory(id: "math", label: "Math", systemImage: "function", filter: .categories(["math"])),
-        PickerCategory(
-            id: "type", label: "Type", systemImage: "textformat", filter: .categories(["typography", "superscript"])),
-        PickerCategory(id: "objects", label: "Objects", systemImage: "cube.box", filter: .categories(["objects"])),
-    ]
-}
-
 @MainActor
 @Observable
 final class PickerViewModel {
     var query = "" {
         didSet {
+            isAllSearchTextSelected = false
             guard query != oldValue else { return }
             refreshResults()
         }
     }
     var results: [PickerEntry]
     var selectedIndex = 0
-    var selectionAnimationRequest = 0
     var hoveredID: PickerEntry.ID?
-    var columnCount = PickerGeometry.columnCount(for: PickerGeometry.defaultSize.width)
     var searchFocusRequest = 0
+    var selectAllRequest = 0
+    private(set) var isAllSearchTextSelected = false
     var copiedEntryID: PickerEntry.ID?
     var confirmingEntryID: PickerEntry.ID?
-    var selectedCategory = PickerCategory.all {
-        didSet { refreshResults() }
-    }
-    var onPreferredSizeChange: ((CGSize) -> Void)?
 
     let bundleID: String
-    let compact: Bool
     let onSelect: (String, Bool) -> Void
     let onDismiss: () -> Void
-    let categories = PickerCategory.defaults
 
     init(
         bundleID: String,
-        compact: Bool,
         onSelect: @escaping (String, Bool) -> Void,
         onDismiss: @escaping () -> Void
     ) {
         self.bundleID = bundleID
-        self.compact = compact
         self.onSelect = onSelect
         self.onDismiss = onDismiss
         self.query = ""
-        self.results = Self.results(query: "", category: .all, bundleID: bundleID)
+        self.results = Self.results(query: "", bundleID: bundleID)
     }
 
     var activeEntry: PickerEntry? {
@@ -89,18 +47,6 @@ final class PickerViewModel {
         results.indices.contains(selectedIndex) ? results[selectedIndex] : nil
     }
 
-    func updateColumnCount(for width: CGFloat) {
-        columnCount = compact ? 10 : PickerGeometry.visibleColumnLimit
-    }
-
-    var visibleRows: Int {
-        compact ? 1 : PickerGeometry.visibleRowCount(for: results.count)
-    }
-
-    var preferredSize: CGSize {
-        PickerGeometry.defaultSize
-    }
-
     func moveSelection(_ delta: Int) {
         guard !results.isEmpty else { return }
         let nextIndex = Self.clampedSelection(
@@ -110,7 +56,6 @@ final class PickerViewModel {
         )
         guard nextIndex != selectedIndex else { return }
         selectedIndex = nextIndex
-        selectionAnimationRequest += 1
     }
 
     func moveLeft() {
@@ -122,11 +67,11 @@ final class PickerViewModel {
     }
 
     func moveUp() {
-        moveSelection(-columnCount)
+        moveSelection(-PickerGeometry.visibleColumnLimit)
     }
 
     func moveDown() {
-        moveSelection(columnCount)
+        moveSelection(PickerGeometry.visibleColumnLimit)
     }
 
     func selectCurrent(keepOpen: Bool = false) {
@@ -171,11 +116,21 @@ final class PickerViewModel {
     }
 
     func appendSearchText(_ text: String) {
-        query += text
+        if isAllSearchTextSelected {
+            query = text
+        } else {
+            query += text
+        }
+        isAllSearchTextSelected = false
     }
 
     func deleteBackwardInSearch() {
         guard !query.isEmpty else { return }
+        if isAllSearchTextSelected {
+            query = ""
+            isAllSearchTextSelected = false
+            return
+        }
         query.removeLast()
     }
 
@@ -183,8 +138,9 @@ final class PickerViewModel {
         searchFocusRequest += 1
     }
 
-    func selectCategory(_ category: PickerCategory) {
-        selectedCategory = category
+    func requestSelectAll() {
+        selectAllRequest += 1
+        isAllSearchTextSelected = !query.isEmpty
     }
 
     func handleEscape() {
@@ -202,54 +158,21 @@ final class PickerViewModel {
     }
 
     private func refreshResults() {
-        results = Self.results(
-            query: query,
-            category: selectedCategory,
-            bundleID: bundleID
-        )
+        results = Self.results(query: query, bundleID: bundleID)
         selectedIndex = 0
         hoveredID = nil
         confirmingEntryID = nil
-        onPreferredSizeChange?(preferredSize)
     }
 
     static func results(
         query: String,
-        category: PickerCategory,
         bundleID: String,
         searchLimit: Int = 50
     ) -> [PickerEntry] {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        switch category.filter {
-        case .all:
-            return trimmedQuery.isEmpty
-                ? EmojiSearch.shared.defaultEntries(bundleID: bundleID)
-                : EmojiSearch.shared.search(trimmedQuery, limit: searchLimit, bundleID: bundleID)
-
-        case .recent:
-            let recent = EmojiSearch.shared.recentEntries(bundleID: bundleID, limit: searchLimit)
-            guard !trimmedQuery.isEmpty else { return recent }
-            let recentIDs = Set(recent.map(\.id))
-            return EmojiSearch.shared.search(trimmedQuery, limit: 300, bundleID: bundleID)
-                .filter { recentIDs.contains($0.id) }
-                .prefix(searchLimit)
-                .map { $0 }
-
-        case .categories(let categoryIDs):
-            if trimmedQuery.isEmpty {
-                return EmojiSearch.shared.entries(
-                    in: categoryIDs,
-                    limit: searchLimit,
-                    bundleID: bundleID
-                )
-            }
-
-            return EmojiSearch.shared.search(trimmedQuery, limit: 300, bundleID: bundleID)
-                .filter { categoryIDs.contains($0.category) }
-                .prefix(searchLimit)
-                .map { $0 }
-        }
+        return trimmedQuery.isEmpty
+            ? EmojiSearch.shared.defaultEntries(bundleID: bundleID)
+            : EmojiSearch.shared.search(trimmedQuery, limit: searchLimit, bundleID: bundleID)
     }
 }
 
@@ -259,68 +182,50 @@ struct PickerContentView: View {
     var viewModel: PickerViewModel
 
     @FocusState private var searchFocused: Bool
-
-    private var columns: [GridItem] {
-        if viewModel.compact {
-            return Array(
-                repeating: GridItem(.fixed(36), spacing: 4),
-                count: viewModel.columnCount
-            )
-        }
-
-        return [
-            GridItem(
-                .fixed(PickerGeometry.cellSize),
-                spacing: PickerGeometry.cellSpacing
-            )
-        ]
-    }
+    @State private var searchSelection: TextSelection?
 
     var body: some View {
-        GeometryReader { geometry in
-            GlassEffectContainer(spacing: 10) {
-                VStack(spacing: 0) {
-                    searchField
-                    gridContent
-                }
-                .padding(PickerGeometry.outerPadding)
-                .background(
-                    Color(nsColor: .windowBackgroundColor),
-                    in: RoundedRectangle(cornerRadius: 24, style: .continuous)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        GlassEffectContainer(spacing: 10) {
+            VStack(spacing: 0) {
+                searchField
+                gridContent
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .onAppear {
-                viewModel.updateColumnCount(for: geometry.size.width)
-                searchFocused = true
-            }
-            .onChange(of: viewModel.searchFocusRequest) {
-                searchFocused = true
-            }
-            .onChange(of: geometry.size.width) { _, width in
-                viewModel.updateColumnCount(for: width)
-            }
-            .onKeyPress(.upArrow) {
-                viewModel.moveUp()
-                return .handled
-            }
-            .onKeyPress(.downArrow) {
-                viewModel.moveDown()
-                return .handled
-            }
-            .onKeyPress(.leftArrow) {
-                viewModel.moveLeft()
-                return .handled
-            }
-            .onKeyPress(.rightArrow) {
-                viewModel.moveRight()
-                return .handled
-            }
-            .onKeyPress(.escape) {
-                viewModel.handleEscape()
-                return .handled
-            }
+            .padding(PickerGeometry.outerPadding)
+            .background(
+                Color(nsColor: .windowBackgroundColor),
+                in: RoundedRectangle(cornerRadius: 24, style: .continuous)
+            )
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear { searchFocused = true }
+        .onChange(of: viewModel.searchFocusRequest) {
+            searchFocused = true
+        }
+        .onChange(of: viewModel.selectAllRequest) {
+            searchFocused = true
+            searchSelection = TextSelection(
+                range: viewModel.query.startIndex..<viewModel.query.endIndex
+            )
+        }
+        .onKeyPress(.upArrow) {
+            viewModel.moveUp()
+            return .handled
+        }
+        .onKeyPress(.downArrow) {
+            viewModel.moveDown()
+            return .handled
+        }
+        .onKeyPress(.leftArrow) {
+            viewModel.moveLeft()
+            return .handled
+        }
+        .onKeyPress(.rightArrow) {
+            viewModel.moveRight()
+            return .handled
+        }
+        .onKeyPress(.escape) {
+            viewModel.handleEscape()
+            return .handled
         }
     }
 
@@ -338,7 +243,8 @@ struct PickerContentView: View {
                 text: Binding(
                     get: { viewModel.query },
                     set: { viewModel.query = $0 }
-                )
+                ),
+                selection: $searchSelection
             )
             .textFieldStyle(.plain)
             .font(.system(size: 14))
@@ -366,14 +272,12 @@ struct PickerContentView: View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVGrid(columns: fullPickerColumns, spacing: PickerGeometry.cellSpacing) {
-                    ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, entry in
+                    ForEach(viewModel.results) { entry in
                         EmojiTileView(
                             entry: entry,
-                            isSelected: index == viewModel.selectedIndex,
+                            isActive: viewModel.activeEntry?.id == entry.id,
                             isCopied: viewModel.copiedEntryID == entry.id,
                             isConfirming: viewModel.confirmingEntryID == entry.id,
-                            selectionAnimationRequest: viewModel.selectionAnimationRequest,
-                            compact: viewModel.compact,
                             onSelect: { viewModel.select(entry) },
                             onCopy: { viewModel.copyFromMenu(entry) },
                             onRemove: { viewModel.removeFromRecent(entry) },
@@ -394,9 +298,8 @@ struct PickerContentView: View {
                 .padding(PickerGeometry.gridPadding)
             }
             .frame(
-                width: viewModel.compact ? nil : PickerGeometry.gridWidth() + PickerGeometry.gridPadding * 2,
-                height: viewModel.compact
-                    ? nil : PickerGeometry.gridViewportHeight(visibleRows: PickerGeometry.visibleRowLimit)
+                width: PickerGeometry.gridWidth() + PickerGeometry.gridPadding * 2,
+                height: PickerGeometry.gridViewportHeight(visibleRows: PickerGeometry.visibleRowLimit)
             )
             .onChange(of: viewModel.selectedIndex) { _, idx in
                 if idx < viewModel.results.count {
@@ -409,10 +312,6 @@ struct PickerContentView: View {
     }
 
     private var fullPickerColumns: [GridItem] {
-        if viewModel.compact {
-            return columns
-        }
-
         return Array(
             repeating: GridItem(.fixed(PickerGeometry.cellSize), spacing: PickerGeometry.cellSpacing),
             count: PickerGeometry.visibleColumnLimit
@@ -439,14 +338,10 @@ private struct SearchIcon: Shape {
 }
 
 private struct EmojiTileView: View {
-    @Environment(\.colorScheme) private var colorScheme
-
     let entry: PickerEntry
-    let isSelected: Bool
+    let isActive: Bool
     let isCopied: Bool
     let isConfirming: Bool
-    let selectionAnimationRequest: Int
-    let compact: Bool
     let onSelect: () -> Void
     let onCopy: () -> Void
     let onRemove: () -> Void
@@ -484,25 +379,22 @@ private struct EmojiTileView: View {
         }
         .frame(width: tileSize, height: tileSize)
         .background {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(isSelected ? selectionBackground : .clear)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(isActive ? Color.primary.opacity(0.1) : .clear)
+                .padding(4)
         }
-        .animation(.easeOut(duration: 0.12), value: selectionAnimationRequest)
+        .animation(.easeOut(duration: 0.12), value: isActive)
         .contentShape(Rectangle())
     }
 
     private var emojiLabel: some View {
         Text(entry.character)
-            .font(.system(size: compact ? 22 : 27))
+            .font(.system(size: 27))
             .frame(width: tileSize, height: tileSize)
     }
 
     private var tileSize: CGFloat {
-        compact ? 36 : PickerGeometry.cellSize
-    }
-
-    private var selectionBackground: Color {
-        colorScheme == .dark ? .black : .white
+        PickerGeometry.cellSize
     }
 
 }

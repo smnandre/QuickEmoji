@@ -3,28 +3,38 @@ import XCTest
 
 @MainActor
 final class AppSettingsTests: XCTestCase {
-    func testLaunchAtLoginToggleReflectsControllerState() {
+    func testLaunchAtLoginSettingReflectsControllerState() {
         let controller = MockLoginItemController()
         let settings = AppSettings(loginItemController: controller)
 
         XCTAssertEqual(settings.launchAtLoginStatus, .disabled)
 
-        settings.toggleLaunchAtLogin()
+        settings.setLaunchAtLogin(true)
 
         XCTAssertEqual(settings.launchAtLoginStatus, .enabled)
 
-        settings.toggleLaunchAtLogin()
+        settings.setLaunchAtLogin(false)
 
         XCTAssertEqual(settings.launchAtLoginStatus, .disabled)
+        XCTAssertEqual(controller.setEnabledCalls, [true, false])
     }
 
     func testLaunchAtLoginApprovalOpensSystemSettings() {
         let controller = MockLoginItemController(status: .requiresApproval)
         let settings = AppSettings(loginItemController: controller)
 
-        settings.toggleLaunchAtLogin()
+        settings.setLaunchAtLogin(true)
 
         XCTAssertTrue(controller.didOpenSystemSettings)
+        XCTAssertEqual(controller.setEnabledCalls, [])
+    }
+
+    func testLaunchAtLoginSettingDoesNotRepeatCurrentState() {
+        let controller = MockLoginItemController(status: .enabled)
+        let settings = AppSettings(loginItemController: controller)
+
+        settings.setLaunchAtLogin(true)
+
         XCTAssertEqual(controller.setEnabledCalls, [])
     }
 }

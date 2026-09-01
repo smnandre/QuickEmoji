@@ -57,16 +57,20 @@ final class AppSettings {
         return loginItemController.status
     }
 
-    func toggleLaunchAtLogin() {
+    func setLaunchAtLogin(_ enabled: Bool) {
         withMutation(keyPath: \.launchAtLoginStatus) {
             do {
-                switch loginItemController.status {
-                case .disabled:
-                    try loginItemController.setEnabled(true)
-                case .enabled:
+                if enabled {
+                    switch loginItemController.status {
+                    case .disabled:
+                        try loginItemController.setEnabled(true)
+                    case .enabled:
+                        return
+                    case .requiresApproval:
+                        loginItemController.openSystemSettings()
+                    }
+                } else if loginItemController.status != .disabled {
                     try loginItemController.setEnabled(false)
-                case .requiresApproval:
-                    loginItemController.openSystemSettings()
                 }
             } catch {
                 AppLogger.settings.error(

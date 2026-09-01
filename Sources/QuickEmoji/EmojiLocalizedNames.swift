@@ -12,7 +12,7 @@ enum EmojiLocalizedNames {
 
         guard
             let url = AppResources.bundle.url(
-                forResource: "EmojiNames.\(resourceLanguage(for: language))",
+                forResource: "EmojiNames.\(language)",
                 withExtension: "json"
             ),
             let data = try? Data(contentsOf: url),
@@ -24,10 +24,6 @@ enum EmojiLocalizedNames {
 
         namesByLanguage[language] = file.names
         return file.names
-    }
-
-    private static func resourceLanguage(for language: String) -> String {
-        language == "zh-hans" ? "zh-Hans" : language
     }
 
     private struct File: Decodable {

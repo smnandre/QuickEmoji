@@ -28,6 +28,14 @@ final class EmojiSearchTests: XCTestCase {
             keywords: ["math", "circle"],
             category: "math"
         ),
+        PickerEntry(
+            id: "4",
+            character: "🇫🇷",
+            name: "Flag: France",
+            shortcode: "flag_france",
+            keywords: ["country", "flag", "france"],
+            category: "flags"
+        ),
     ]
 
     func testShortcodePrefixMatchesFirst() {
@@ -68,6 +76,20 @@ final class EmojiSearchTests: XCTestCase {
         XCTAssertEqual(results.map(\.character), ["→"])
     }
 
+    func testCountryFlagMatchesISOCode() {
+        let search = makeSearch()
+
+        let results = search.search("fr", limit: 5)
+
+        XCTAssertEqual(results.first?.character, "🇫🇷")
+    }
+
+    func testCountryCodeIsDerivedOnlyFromRegionalIndicatorFlags() {
+        XCTAssertEqual(EmojiSearch.countryCode(forFlag: "🇫🇷"), "fr")
+        XCTAssertNil(EmojiSearch.countryCode(forFlag: "🏳️‍🌈"))
+        XCTAssertNil(EmojiSearch.countryCode(forFlag: "fr"))
+    }
+
     func testSearchRespectsLimit() {
         let search = makeSearch()
 
@@ -106,22 +128,6 @@ final class EmojiSearchTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(EmojiLocalizedNames.names(for: "fr").count, 1700)
     }
 
-    func testSpanishGermanAndSimplifiedChineseUnicodeShortNamesAreDisplayed() {
-        let cases: [(String, String, String)] = [
-            ("es", "cara sonriendo", "😀"),
-            ("de", "grinsendes Gesicht", "😀"),
-            ("zh-Hans", "嘿嘿", "😀"),
-        ]
-
-        for (locale, expectedName, character) in cases {
-            let search = EmojiSearch(languageCodeProvider: { locale }, rankedCharactersProvider: { _, _ in [] })
-            XCTAssertEqual(search.entry(forCharacter: character)?.name, expectedName, "\(locale) name")
-            XCTAssertTrue(
-                search.search(expectedName, limit: 10).map(\.character).contains(character), "\(locale) search")
-            XCTAssertGreaterThanOrEqual(EmojiLocalizedNames.names(for: locale).count, 1700, "\(locale) coverage")
-        }
-    }
-
     func testFrenchAliasesAreDisabledForEnglishLocale() {
         let search = EmojiSearch(languageCodeProvider: { "en" }, rankedCharactersProvider: { _, _ in [] })
 
@@ -142,18 +148,15 @@ final class EmojiSearchTests: XCTestCase {
         XCTAssertEqual(EmojiSearch.primaryLanguageCode(from: "fr_FR"), "fr")
         XCTAssertEqual(EmojiSearch.primaryLanguageCode(from: "en-US"), "en")
         XCTAssertEqual(EmojiSearch.primaryLanguageCode(from: ""), "")
-        XCTAssertEqual(EmojiSearch.emojiLocaleCode(from: "zh-Hans-CN"), "zh-Hans")
-        XCTAssertEqual(EmojiSearch.emojiLocaleCode(from: "zh-CN"), "zh-Hans")
-        XCTAssertEqual(EmojiSearch.emojiLocaleCode(from: "zh"), "zh-Hans")
+        XCTAssertEqual(EmojiSearch.emojiLocaleCode(from: "fr-CA"), "fr")
+        XCTAssertEqual(EmojiSearch.emojiLocaleCode(from: "de-DE"), "en")
+        XCTAssertEqual(EmojiSearch.emojiLocaleCode(from: "zh-Hans-CN"), "en")
     }
 
     func testStringsCatalogHasRequestedUITranslations() {
         XCTAssertEqual(L10n.string("Show Picker", localeIdentifier: "fr-FR"), "Afficher le sélecteur")
-        XCTAssertEqual(L10n.string("Show Picker", localeIdentifier: "es-ES"), "Mostrar selector")
-        XCTAssertEqual(L10n.string("Show Picker", localeIdentifier: "de-DE"), "Emoji-Auswahl anzeigen")
-        XCTAssertEqual(L10n.string("Show Picker", localeIdentifier: "zh-Hans-CN"), "显示选择器")
-        XCTAssertEqual(L10n.string("Show Picker", localeIdentifier: "zh-CN"), "显示选择器")
         XCTAssertEqual(L10n.string("Show Picker", localeIdentifier: "en-US"), "Show Picker")
+        XCTAssertEqual(L10n.string("Show Picker", localeIdentifier: "de-DE"), "Show Picker")
     }
 
     func testDefaultEntriesPrioritizeRankedCharactersWithoutDuplicates() {

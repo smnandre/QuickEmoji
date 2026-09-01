@@ -1,17 +1,7 @@
 import AppKit
 
 struct CaretResult {
-    enum Source {
-        case accessibilityCaret
-        case focusedWindowFallback
-        case mouseFallback
-    }
-
-    let point: NSPoint
-    let lineHeight: CGFloat
     let screen: NSScreen
-    let source: Source
-    let isEditable: Bool
 }
 
 struct FocusedTextContext {
@@ -22,55 +12,15 @@ struct FocusedTextContext {
 
 @MainActor
 enum CaretLocator {
-    private struct CachedCaretResult {
-        let pid: pid_t
-        let timestamp: TimeInterval
-        let result: CaretResult
-    }
-
-    private static let cacheLifetime: TimeInterval = 0.12
-    private static var cachedResult: CachedCaretResult?
-
-    static func locate(forceRefresh: Bool = false) -> CaretResult {
-        if !forceRefresh,
-            let app = NSWorkspace.shared.frontmostApplication,
-            let cachedResult,
-            cachedResult.pid == app.processIdentifier,
-            Date.timeIntervalSinceReferenceDate - cachedResult.timestamp <= cacheLifetime
-        {
-            return cachedResult.result
-        }
-
-        let result: CaretResult
+    static func locate() -> CaretResult {
         if let accessibilityResult = accessibilityCaretResult() {
-            result = accessibilityResult
-        } else if let fallbackResult = focusedWindowFallback() {
-            result = fallbackResult
-        } else {
-            let mouse = NSEvent.mouseLocation
-            let screen = screenContaining(mouse) ?? NSScreen.main ?? NSScreen.screens[0]
-            result = CaretResult(
-                point: mouse, lineHeight: 16, screen: screen, source: .mouseFallback, isEditable: false)
+            return accessibilityResult
         }
-
-        if let app = NSWorkspace.shared.frontmostApplication {
-            cachedResult = CachedCaretResult(
-                pid: app.processIdentifier,
-                timestamp: Date.timeIntervalSinceReferenceDate,
-                result: result
-            )
+        if let fallbackResult = focusedWindowFallback() {
+            return fallbackResult
         }
-
-        return result
-    }
-
-    static func invalidateCache() {
-        cachedResult = nil
-    }
-
-    static func focusedTextContext() -> FocusedTextContext? {
-        guard let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier else { return nil }
-        return focusedTextContext(for: pid)
+        let screen = screenContaining(NSEvent.mouseLocation) ?? NSScreen.main ?? NSScreen.screens[0]
+        return CaretResult(screen: screen)
     }
 
     static func focusedTextContext(for pid: pid_t) -> FocusedTextContext? {
@@ -121,19 +71,11 @@ enum CaretLocator {
         guard let primaryScreen = NSScreen.screens.first else { return nil }
         let screenHeight = primaryScreen.frame.height
 
-        let lineHeight = max(rect.size.height, 14)
-
         let baselineY = screenHeight - (rect.origin.y + rect.size.height)
         let point = NSPoint(x: rect.origin.x, y: baselineY)
 
         let screen = screenContaining(point) ?? primaryScreen
-        return CaretResult(
-            point: point,
-            lineHeight: lineHeight,
-            screen: screen,
-            source: .accessibilityCaret,
-            isEditable: focusedElementContext.isEditable
-        )
+        return CaretResult(screen: screen)
     }
 
     private static func focusedWindowFallback() -> CaretResult? {
@@ -177,8 +119,7 @@ enum CaretLocator {
         )
 
         let screen = screenContaining(point) ?? primaryScreen
-        return CaretResult(
-            point: point, lineHeight: 16, screen: screen, source: .focusedWindowFallback, isEditable: false)
+        return CaretResult(screen: screen)
     }
 
     private static func checkEditable(_ element: AXUIElement) -> Bool {

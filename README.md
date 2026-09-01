@@ -31,7 +31,8 @@ Press **⌘⇧E** anywhere. A floating panel opens near the top-center of the ac
 - **Control-click** or **right-click** to copy
 - **Escape** or **Tab** closes the picker; so does any click outside it
 
-Search understands English Unicode names and shortcodes. It also supports Unicode CLDR short names in French, Spanish, German, and Simplified Chinese.
+Search understands English Unicode names and shortcodes, with French Unicode CLDR short names and aliases when macOS uses French.
+Country flags also match their two-letter codes, such as `fr`, `de`, or `jp`.
 
 ## First launch and Accessibility permission
 
@@ -39,7 +40,7 @@ QuickEmoji asks for **Accessibility** access on first launch:
 
 > System Settings → Privacy & Security → Accessibility → QuickEmoji
 
-If access is missing, QuickEmoji asks macOS for permission and waits for access to be granted. Use **Open Accessibility Settings** in the menu-bar dropdown to open the relevant System Settings page directly.
+If access is missing, QuickEmoji asks macOS for permission and waits for access to be granted.
 
 This is required for: the global ⌘⇧E shortcut, locating the text cursor, and inserting the chosen character into the focused field.
 
@@ -50,8 +51,8 @@ QuickEmoji keeps emoji usage and per-app ranking data on your Mac. It sends no e
 Click the menu-bar icon for:
 
 - **Show Picker (⌘⇧E)** - same as the shortcut
-- **Launch at Login** - open QuickEmoji automatically when you sign in
 - **Check for Updates…** - one-shot lookup against the published Homebrew cask. No background polling, no telemetry.
+- **Settings…** - configure whether QuickEmoji launches when you sign in.
 
 ## Requirements
 
