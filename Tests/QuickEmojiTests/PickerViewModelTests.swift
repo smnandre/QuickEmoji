@@ -7,7 +7,6 @@ final class PickerViewModelTests: XCTestCase {
     func testSelectionMovesByArrowIntentAndClamps() {
         let model = PickerViewModel(
             bundleID: "tests",
-            compact: false,
             onSelect: { _, _ in },
             onDismiss: {}
         )
@@ -21,20 +20,18 @@ final class PickerViewModelTests: XCTestCase {
                 category: "tests"
             )
         }
-        model.columnCount = 4
-
-        model.selectedIndex = 5
+        model.selectedIndex = 6
         model.moveLeft()
-        XCTAssertEqual(model.selectedIndex, 4)
+        XCTAssertEqual(model.selectedIndex, 5)
 
         model.moveRight()
-        XCTAssertEqual(model.selectedIndex, 5)
+        XCTAssertEqual(model.selectedIndex, 6)
 
         model.moveUp()
         XCTAssertEqual(model.selectedIndex, 1)
 
         model.moveDown()
-        XCTAssertEqual(model.selectedIndex, 5)
+        XCTAssertEqual(model.selectedIndex, 6)
 
         model.selectedIndex = 0
         model.moveUp()
@@ -45,11 +42,6 @@ final class PickerViewModelTests: XCTestCase {
         XCTAssertEqual(model.selectedIndex, 9)
     }
 
-    func testColumnCountUsesWidthWithLowerBound() {
-        XCTAssertEqual(PickerGeometry.columnCount(for: 120), 4)
-        XCTAssertGreaterThan(PickerGeometry.columnCount(for: 520), 4)
-    }
-
     func testMenuBarRecentGridCentersCellsInExpandedMenu() {
         XCTAssertEqual(MenuBarRecentGrid.horizontalInset(for: 245), 17.5, accuracy: 0.001)
         XCTAssertEqual(MenuBarRecentGrid.horizontalInset(for: 279), 34.5, accuracy: 0.001)
@@ -58,7 +50,6 @@ final class PickerViewModelTests: XCTestCase {
     func testSearchTextCanBeDrivenWithoutTextFieldFocus() {
         let model = PickerViewModel(
             bundleID: "tests",
-            compact: false,
             onSelect: { _, _ in },
             onDismiss: {}
         )
@@ -70,13 +61,46 @@ final class PickerViewModelTests: XCTestCase {
         XCTAssertEqual(model.query, "el")
     }
 
+    func testSelectAllRequestCanBeDrivenByTheWindow() {
+        let model = PickerViewModel(
+            bundleID: "tests",
+            onSelect: { _, _ in },
+            onDismiss: {}
+        )
+
+        model.query = "cat"
+        model.requestSelectAll()
+
+        XCTAssertEqual(model.selectAllRequest, 1)
+        XCTAssertTrue(model.isAllSearchTextSelected)
+
+        model.deleteBackwardInSearch()
+
+        XCTAssertEqual(model.query, "")
+        XCTAssertFalse(model.isAllSearchTextSelected)
+    }
+
+    func testTypingReplacesSelectAllSearchText() {
+        let model = PickerViewModel(
+            bundleID: "tests",
+            onSelect: { _, _ in },
+            onDismiss: {}
+        )
+
+        model.query = "cat"
+        model.requestSelectAll()
+        model.appendSearchText("f")
+
+        XCTAssertEqual(model.query, "f")
+        XCTAssertFalse(model.isAllSearchTextSelected)
+    }
+
     func testClickSelectionUsesEntryCharacter() {
         let expectation = expectation(description: "selection completes after feedback")
         var selected: String?
         var keptOpen: Bool?
         let model = PickerViewModel(
             bundleID: "tests",
-            compact: false,
             onSelect: {
                 selected = $0
                 keptOpen = $1
@@ -114,7 +138,6 @@ final class PickerViewModelTests: XCTestCase {
 
         let model = PickerViewModel(
             bundleID: "tests",
-            compact: false,
             onSelect: { _, _ in },
             onDismiss: {}
         )
@@ -133,25 +156,10 @@ final class PickerViewModelTests: XCTestCase {
         XCTAssertEqual(model.copiedEntryID, entry.id)
     }
 
-    func testCategoryFilterLimitsDefaultResults() {
-        let model = PickerViewModel(
-            bundleID: "tests",
-            compact: false,
-            onSelect: { _, _ in },
-            onDismiss: {}
-        )
-
-        model.selectCategory(PickerCategory.defaults.first { $0.id == "math" }!)
-
-        XCTAssertFalse(model.results.isEmpty)
-        XCTAssertTrue(model.results.allSatisfy { $0.category == "math" })
-    }
-
     func testEscapeClearsQueryBeforeDismissing() {
         var dismissed = false
         let model = PickerViewModel(
             bundleID: "tests",
-            compact: false,
             onSelect: { _, _ in },
             onDismiss: { dismissed = true }
         )

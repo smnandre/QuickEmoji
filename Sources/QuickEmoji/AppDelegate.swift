@@ -8,10 +8,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     private var previousApp: NSRunningApplication?
     private var sourceBundleID = ""
     private let textInsertion = TextInsertionCoordinator()
-    private let settings = AppSettings.shared
     private let updateChecker = UpdateChecker.live(caskURL: AppInfo.publishedCaskURL)
     private var updateTask: Task<Void, Never>?
-    private weak var launchAtLoginMenuItem: NSMenuItem?
     private weak var recentGridItem: NSMenuItem?
     private lazy var eventTapController = EventTapController(
         onHotKey: { [weak self] in self?.showFullPicker() },
@@ -40,10 +38,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
             object: nil
         )
         eventTapController.start()
-    }
-
-    @objc private func openAccessibilitySettings() {
-        eventTapController.openAccessibilitySettings()
     }
 
     private func setupMenuBar() {
@@ -88,13 +82,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         checkUpdatesItem.target = self
         menu.addItem(checkUpdatesItem)
 
-        let launchAtLoginItem = makeAlternateMenuItem(
-            title: L10n.string("Launch at Login"),
-            action: #selector(toggleLaunchAtLogin)
+        let settingsItem = NSMenuItem(
+            title: L10n.string("Settings…"),
+            action: #selector(showSettings),
+            keyEquivalent: ","
         )
-        launchAtLoginItem.state = launchAtLoginMenuState
-        menu.addItem(launchAtLoginItem)
-        self.launchAtLoginMenuItem = launchAtLoginItem
+        settingsItem.target = self
+        settingsItem.keyEquivalentModifierMask = [.command]
+        menu.addItem(settingsItem)
 
         menu.addItem(.separator())
         let aboutItem = NSMenuItem(
@@ -106,12 +101,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         menu.addItem(aboutItem)
 
         menu.addItem(
-            makeAlternateMenuItem(
-                title: L10n.string("Open Accessibility Settings"),
-                action: #selector(openAccessibilitySettings)
-            ))
-
-        menu.addItem(
             NSMenuItem(
                 title: L10n.string("Quit"),
                 action: #selector(quit),
@@ -120,16 +109,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         statusItem.menu = menu
     }
 
-    private func makeAlternateMenuItem(title: String, action: Selector) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
-        item.target = self
-        item.isAlternate = true
-        item.keyEquivalentModifierMask = [.option]
-        return item
-    }
-
     func menuNeedsUpdate(_ menu: NSMenu) {
-        launchAtLoginMenuItem?.state = launchAtLoginMenuState
         recentGridItem?.view = makeRecentGridView()
     }
 
@@ -170,7 +150,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
 
         previousApp = AppContext.shared.frontmostApp
         sourceBundleID = AppContext.shared.frontmostBundleID
-        let caret = CaretLocator.locate(forceRefresh: true)
+        let caret = CaretLocator.locate()
 
         let window = PickerWindow(
             caret: caret,
@@ -214,27 +194,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
     private func dismissPicker() {
         pickerWindow?.close()
         pickerWindow = nil
-        CaretLocator.invalidateCache()
     }
 
     @objc private func showAbout() {
-        AboutWindowController.shared.show()
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .center
+        let linkText = "smnand.re/quickemoji"
+        let credits = NSMutableAttributedString(
+            string: "\n\(linkText)\n",
+            attributes: [
+                .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+                .paragraphStyle: paragraphStyle,
+            ]
+        )
+        let linkRange = (credits.string as NSString).range(of: linkText)
+        credits.addAttributes(
+            [.foregroundColor: NSColor.linkColor, .link: AppInfo.websiteURL],
+            range: linkRange
+        )
+
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .applicationVersion: AppInfo.version,
+            .version: "",
+            .credits: credits,
+        ])
     }
 
-    @objc private func toggleLaunchAtLogin(_ sender: NSMenuItem) {
-        settings.toggleLaunchAtLogin()
-        sender.state = launchAtLoginMenuState
-    }
-
-    private var launchAtLoginMenuState: NSControl.StateValue {
-        switch settings.launchAtLoginStatus {
-        case .disabled:
-            return .off
-        case .enabled:
-            return .on
-        case .requiresApproval:
-            return .mixed
-        }
+    @objc private func showSettings() {
+        SettingsWindowController.shared.show()
     }
 
     @objc private func applicationDidResignActive() {

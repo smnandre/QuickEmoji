@@ -3,16 +3,6 @@ import AppKit
 enum PanelGeometry {
     static let edgeGap: CGFloat = 8
 
-    static func centeredFrame(size: CGSize, in visibleFrame: CGRect) -> CGRect {
-        CGRect(
-            x: visibleFrame.midX - size.width / 2,
-            y: visibleFrame.midY - size.height / 2,
-            width: size.width,
-            height: size.height
-        )
-        .clamped(to: visibleFrame, gap: edgeGap)
-    }
-
     static func pickerDefaultFrame(size: CGSize, in visibleFrame: CGRect) -> CGRect {
         let centerY = visibleFrame.maxY - visibleFrame.height * 0.30
         return CGRect(
@@ -51,25 +41,12 @@ enum PickerGeometry {
     static let searchFieldHeight: CGFloat = 44
     static let searchBottomSpacing: CGFloat = 10
     static let horizontalChrome: CGFloat = outerPadding * 2 + gridPadding * 2
-    static let defaultSize = panelSize(visibleRows: visibleRowLimit)
+    static let defaultSize = panelSize()
     static let minimumSize = defaultSize
     static let maximumSize = defaultSize
 
-    static func columnCount(for width: CGFloat) -> Int {
-        let available = max(0, width - horizontalChrome)
-        let step = cellSize + cellSpacing
-        return min(visibleColumnLimit, max(4, Int((available + cellSpacing) / step)))
-    }
-
-    static func visibleRowCount(for resultCount: Int) -> Int {
-        guard resultCount > 0 else { return 1 }
-        let rows = Int(
-            ceil(Double(min(resultCount, visibleColumnLimit * visibleRowLimit)) / Double(visibleColumnLimit)))
-        return max(1, min(visibleRowLimit, rows))
-    }
-
-    static func gridWidth(columns: Int = visibleColumnLimit) -> CGFloat {
-        CGFloat(columns) * cellSize + CGFloat(max(0, columns - 1)) * cellSpacing
+    static func gridWidth() -> CGFloat {
+        CGFloat(visibleColumnLimit) * cellSize + CGFloat(visibleColumnLimit - 1) * cellSpacing
     }
 
     static func gridHeight(rows: Int) -> CGFloat {
@@ -80,13 +57,13 @@ enum PickerGeometry {
         gridHeight(rows: visibleRows) + gridPadding * 2
     }
 
-    static func panelSize(visibleRows: Int) -> CGSize {
+    static func panelSize() -> CGSize {
         CGSize(
             width: gridWidth() + horizontalChrome,
             height: outerPadding * 2
                 + searchFieldHeight
                 + searchBottomSpacing
-                + gridViewportHeight(visibleRows: visibleRows)
+                + gridViewportHeight(visibleRows: visibleRowLimit)
         )
     }
 }

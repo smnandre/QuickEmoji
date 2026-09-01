@@ -29,18 +29,6 @@ final class EventTapController {
         startAccessibilityPolling()
     }
 
-    func openAccessibilitySettings() {
-        requestAccessibilityPromptIfNeeded()
-        guard
-            let url = URL(
-                string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-            )
-        else {
-            return
-        }
-        NSWorkspace.shared.open(url)
-    }
-
     func stop() {
         pollTimer?.invalidate()
         pollTimer = nil

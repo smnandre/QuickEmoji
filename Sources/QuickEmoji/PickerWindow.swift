@@ -27,7 +27,6 @@ final class PickerWindow: NSPanel, NSWindowDelegate {
 
         self.viewModel = PickerViewModel(
             bundleID: bundleID,
-            compact: false,
             onSelect: onSelect,
             onDismiss: onDismiss
         )
@@ -53,10 +52,6 @@ final class PickerWindow: NSPanel, NSWindowDelegate {
         sharingType = .none
         minSize = PickerGeometry.minimumSize
         maxSize = PickerGeometry.maximumSize
-
-        viewModel.onPreferredSizeChange = { [weak self] size in
-            self?.resizeToPreferredSize(size)
-        }
 
         let hosting = NSHostingView(rootView: PickerContentView(viewModel: viewModel))
         hosting.frame = NSRect(origin: .zero, size: frame.size)
@@ -110,14 +105,6 @@ final class PickerWindow: NSPanel, NSWindowDelegate {
     func handleGlobalKeyEvent(_ event: CGEvent) -> Bool {
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
         let flags = event.flags
-        let onlyCommand =
-            flags.contains(.maskCommand)
-            && flags.intersection([.maskShift, .maskAlternate, .maskControl]).isEmpty
-
-        if keyCode == 0 && onlyCommand {
-            selectAllSearchText()
-            return true
-        }
 
         switch keyCode {
         case 123:
@@ -143,11 +130,38 @@ final class PickerWindow: NSPanel, NSWindowDelegate {
         case 53:
             handleEscape()
             return true
-        case 51:
-            viewModel.deleteBackwardInSearch()
+        case 51, 117:
+            if viewModel.isAllSearchTextSelected {
+                viewModel.deleteBackwardInSearch()
+                return true
+            }
+            if Self.usesNativeTextEditing(
+                isApplicationActive: NSApp.isActive,
+                isPickerKeyWindow: isKeyWindow
+            ) {
+                return false
+            }
+            if keyCode == 51 {
+                viewModel.deleteBackwardInSearch()
+            }
             return true
         default:
             break
+        }
+
+        if Self.isSelectAllShortcut(
+            charactersIgnoringModifiers: NSEvent(cgEvent: event)?.charactersIgnoringModifiers,
+            flags: flags
+        ) {
+            selectAllSearchText()
+            return true
+        }
+
+        if Self.usesNativeTextEditing(
+            isApplicationActive: NSApp.isActive,
+            isPickerKeyWindow: isKeyWindow
+        ) {
+            return false
         }
 
         let hasCommandControlOrOption =
@@ -185,7 +199,6 @@ final class PickerWindow: NSPanel, NSWindowDelegate {
         guard warmedPickerView == nil else { return }
         let model = PickerViewModel(
             bundleID: bundleID,
-            compact: false,
             onSelect: { _, _ in },
             onDismiss: {}
         )
@@ -217,17 +230,6 @@ final class PickerWindow: NSPanel, NSWindowDelegate {
     }
 
     private func handleKeyEvent(_ event: NSEvent) -> Bool {
-        let onlyCommand =
-            event.modifierFlags.contains(.command)
-            && !event.modifierFlags.contains(.shift)
-            && !event.modifierFlags.contains(.option)
-            && !event.modifierFlags.contains(.control)
-
-        if event.keyCode == 0 && onlyCommand {
-            selectAllSearchText()
-            return true
-        }
-
         switch Int(event.keyCode) {
         case 123:
             viewModel.moveLeft()
@@ -280,10 +282,26 @@ final class PickerWindow: NSPanel, NSWindowDelegate {
     }
 
     private func selectAllSearchText() {
-        viewModel.requestSearchFocus()
-        DispatchQueue.main.async {
-            NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil)
-        }
+        NSApp.activate()
+        makeKeyAndOrderFront(nil)
+        makeKey()
+        viewModel.requestSelectAll()
+    }
+
+    nonisolated static func usesNativeTextEditing(
+        isApplicationActive: Bool,
+        isPickerKeyWindow: Bool
+    ) -> Bool {
+        isApplicationActive && isPickerKeyWindow
+    }
+
+    nonisolated static func isSelectAllShortcut(
+        charactersIgnoringModifiers: String?,
+        flags: CGEventFlags
+    ) -> Bool {
+        charactersIgnoringModifiers?.lowercased() == "a"
+            && flags.contains(.maskCommand)
+            && flags.intersection([.maskShift, .maskAlternate, .maskControl]).isEmpty
     }
 
     private func restoreSavedFrameIfUsable(defaultFrame: CGRect) {
@@ -294,11 +312,6 @@ final class PickerWindow: NSPanel, NSWindowDelegate {
         } else if frame.size != defaultFrame.size {
             setFrame(framePreservingTopCenter(size: defaultFrame.size), display: false)
         }
-    }
-
-    private func resizeToPreferredSize(_ size: CGSize) {
-        guard !viewModel.compact, frame.size != size else { return }
-        setFrame(framePreservingTopCenter(size: size), display: true, animate: true)
     }
 
     private func framePreservingTopCenter(size: CGSize) -> CGRect {

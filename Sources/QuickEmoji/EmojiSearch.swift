@@ -122,31 +122,6 @@ final class EmojiSearch {
         deduplicatedDefaults(bundleID: bundleID)
     }
 
-    func entries(in categories: Set<String>, limit: Int = 50, bundleID: String = "") -> [PickerEntry] {
-        guard !categories.isEmpty else {
-            return Array(deduplicatedDefaults(bundleID: bundleID).prefix(limit))
-        }
-
-        let ranked = Array(
-            rankedEntries(bundleID: bundleID)
-                .filter { categories.contains($0.category) }
-                .prefix(limit))
-        var seenIDs = Set(ranked.map(\.id))
-        let rest = entries.lazy
-            .filter { categories.contains($0.category) && !seenIDs.contains($0.id) }
-            .prefix(max(0, limit - ranked.count))
-
-        return ranked
-            + rest.map { entry in
-                seenIDs.insert(entry.id)
-                return entry
-            }
-    }
-
-    func recentEntries(bundleID: String = "", limit: Int = 50) -> [PickerEntry] {
-        Array(rankedEntries(bundleID: bundleID).prefix(limit))
-    }
-
     func entry(forCharacter character: String) -> PickerEntry? {
         entriesByCharacter[character]
     }
@@ -218,12 +193,7 @@ final class EmojiSearch {
     }
 
     nonisolated static func emojiLocaleCode(from localeIdentifier: String) -> String {
-        let components = localeIdentifier.split { $0 == "_" || $0 == "-" }
-        guard let language = components.first.map({ String($0).lowercased() }) else { return "" }
-        if language == "zh", !components.contains(where: { $0.lowercased() == "hant" }) {
-            return "zh-Hans"
-        }
-        return language
+        primaryLanguageCode(from: localeIdentifier) == "fr" ? "fr" : "en"
     }
 
     private struct SearchableEntry {
@@ -240,7 +210,9 @@ final class EmojiSearch {
             self.normalizedShortcode = EmojiSearch.normalize(entry.shortcode)
             self.normalizedName = EmojiSearch.normalize(entry.name)
             self.normalizedCategory = EmojiSearch.normalize(entry.category)
-            self.normalizedKeywords = entry.keywords.map(EmojiSearch.normalize)
+            self.normalizedKeywords =
+                (entry.keywords + [EmojiSearch.countryCode(forFlag: entry.character)].compactMap { $0 }).map(
+                    EmojiSearch.normalize)
 
             var prefixes: [String] = []
             prefixes.reserveCapacity(normalizedShortcode.count)
@@ -265,6 +237,22 @@ final class EmojiSearch {
                 || normalizedCategory == query
                 || normalizedKeywords.contains(query)
         }
+    }
+
+    nonisolated static func countryCode(forFlag character: String) -> String? {
+        let scalars = Array(character.unicodeScalars)
+        guard scalars.count == 2 else { return nil }
+
+        var code = ""
+        for scalar in scalars {
+            guard (0x1F1E6...0x1F1FF).contains(scalar.value),
+                let letter = UnicodeScalar(scalar.value - 0x1F1E6 + 97)
+            else {
+                return nil
+            }
+            code.unicodeScalars.append(letter)
+        }
+        return code
     }
 
     private static func specialCharacters(languageCode: String) -> [PickerEntry] {
