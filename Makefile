@@ -1,4 +1,4 @@
-.PHONY: help build test lint package run verify clean
+.PHONY: help build test lint package run verify clean release-app release-dmg release-cask
 .DEFAULT_GOAL := help
 
 APP    := QuickEmoji
@@ -52,3 +52,12 @@ run:
 
 verify: test lint package
 	./Scripts/run-app.sh --no-build --smoke
+
+release-app:
+	SIGNING_MODE=release APP_IDENTITY="$(APP_IDENTITY)" ./Scripts/build-app.sh
+
+release-dmg:
+	./Scripts/create-dmg.sh "$(VERSION)"
+
+release-cask:
+	./Scripts/render-homebrew-cask.sh "$(VERSION)" "$(SHA256)" "$(OUTPUT)"
