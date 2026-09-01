@@ -15,6 +15,6 @@ permissions:
 
 jobs:
   deploy:
-    uses: smnandre/.github/.github/workflows/Pages.yml@73b564c9b3e173df776fc88a630d7ec524d30b77
+    uses: smnandre/.github/.github/workflows/Pages.yml@dde72e3a0d3ba29999360eab39e78a111d572b47
     with:
       path: docs
