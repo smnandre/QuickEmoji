@@ -15,7 +15,7 @@ brew install --cask smnandre/tap/quickemoji
 
 ### Direct download
 
-Download `QuickEmoji.dmg` from the [latest release](https://github.com/smnandre/QuickEmoji/releases/latest), open it, then drag `QuickEmoji.app` to `Applications`.
+Download the DMG from the [latest release](https://github.com/smnandre/QuickEmoji/releases/latest), open it, then drag `QuickEmoji.app` to `Applications`.
 
 ## Usage
 
