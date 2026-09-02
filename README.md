@@ -1,8 +1,8 @@
 # QuickEmoji
 
-A macOS menu-bar app for inserting emoji and special characters from anywhere. One global shortcut opens a search-and-pick panel, then inserts the selected character into the app you were using. Visit [smnand.re/quickemoji](https://smnand.re/quickemoji).
+![QuickEmoji](docs/quickemoji-og.png)
 
-> The picker works in text-capable apps such as Safari, Notes, Slack, code editors, and terminals.
+Find and insert emoji and special characters with a global keyboard shortcut on macOS.
 
 ## Install
 
@@ -36,13 +36,9 @@ Country flags also match their two-letter codes, such as `fr`, `de`, or `jp`.
 
 ## First launch and Accessibility permission
 
-QuickEmoji asks for **Accessibility** access on first launch:
+QuickEmoji requires **Accessibility** access for the global shortcut, locating the text cursor, and inserting the selected character. macOS prompts for access on first launch:
 
 > System Settings → Privacy & Security → Accessibility → QuickEmoji
-
-If access is missing, QuickEmoji asks macOS for permission and waits for access to be granted.
-
-This is required for: the global ⌘⇧E shortcut, locating the text cursor, and inserting the chosen character into the focused field.
 
 QuickEmoji keeps emoji usage and per-app ranking data on your Mac. It sends no emoji history or focused-field content. The manual update check reads the published Homebrew cask. There is no telemetry.
 
@@ -51,7 +47,7 @@ QuickEmoji keeps emoji usage and per-app ranking data on your Mac. It sends no e
 Click the menu-bar icon for:
 
 - **Show Picker (⌘⇧E)** - same as the shortcut
-- **Check for Updates…** - one-shot lookup against the published Homebrew cask. No background polling, no telemetry.
+- **Check for Updates…** - checks the published Homebrew cask once
 - **Settings…** - configure whether QuickEmoji launches when you sign in.
 
 ## Requirements
@@ -75,4 +71,4 @@ Contributions are welcome. Run `make verify` before opening a pull request.
 
 ## License
 
-Released by [Simon André](https://smnandre.dev) under the [MIT License](LICENSE).
+QuickEmoji is released by [Simon André](https://smnandre.dev) under the [MIT License](LICENSE).
