@@ -20,6 +20,7 @@ enum AppInfo {
 
     static let githubURL = "https://github.com/smnandre/QuickEmoji"
     static let websiteURL = URL(string: "https://smnand.re/quickemoji")!
+    static let supportURL = URL(string: "https://smnandre.dev")!
     static let publishedCaskURL = URL(
         string: "https://raw.githubusercontent.com/smnandre/homebrew-tap/main/Casks/quickemoji.rb"
     )!

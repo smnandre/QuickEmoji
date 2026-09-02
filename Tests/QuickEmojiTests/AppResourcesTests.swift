@@ -16,4 +16,8 @@ final class AppResourcesTests: XCTestCase {
             AppResources.bundle.url(forResource: "UnicodeLicense", withExtension: "txt")
         )
     }
+
+    func testSupportURLUsesPersonalWebsite() {
+        XCTAssertEqual(AppInfo.supportURL.absoluteString, "https://smnandre.dev")
+    }
 }
