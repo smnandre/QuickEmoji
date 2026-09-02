@@ -121,6 +121,12 @@
         "fr" : { "stringUnit" : { "state" : "translated", "value" : "Réglages" } }
       }
     },
+    "Support QuickEmoji" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Support QuickEmoji" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Soutenir QuickEmoji" } }
+      }
+    },
     "Show Picker" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Show Picker" } },

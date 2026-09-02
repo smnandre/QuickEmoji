@@ -92,13 +92,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         menu.addItem(settingsItem)
 
         menu.addItem(.separator())
-        let aboutItem = NSMenuItem(
-            title: L10n.string("About QuickEmoji"),
-            action: #selector(showAbout),
-            keyEquivalent: ""
+        let aboutItems = Self.makeAboutMenuItems(
+            target: self,
+            aboutAction: #selector(showAbout),
+            supportAction: #selector(showSupport)
         )
-        aboutItem.target = self
-        menu.addItem(aboutItem)
+        menu.addItem(aboutItems.about)
+        menu.addItem(aboutItems.support)
 
         menu.addItem(
             NSMenuItem(
@@ -107,6 +107,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
                 keyEquivalent: "q"
             ))
         statusItem.menu = menu
+    }
+
+    static func makeAboutMenuItems(
+        target: AnyObject,
+        aboutAction: Selector,
+        supportAction: Selector
+    ) -> (about: NSMenuItem, support: NSMenuItem) {
+        let aboutItem = NSMenuItem(
+            title: L10n.string("About QuickEmoji"),
+            action: aboutAction,
+            keyEquivalent: ""
+        )
+        aboutItem.target = target
+
+        let supportItem = NSMenuItem(
+            title: L10n.string("Support QuickEmoji"),
+            action: supportAction,
+            keyEquivalent: ""
+        )
+        supportItem.target = target
+        supportItem.isAlternate = true
+        supportItem.keyEquivalentModifierMask = [.option]
+
+        return (aboutItem, supportItem)
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
@@ -223,6 +247,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
 
     @objc private func showSettings() {
         SettingsWindowController.shared.show()
+    }
+
+    @objc private func showSupport() {
+        NSWorkspace.shared.open(AppInfo.supportURL)
     }
 
     @objc private func applicationDidResignActive() {
